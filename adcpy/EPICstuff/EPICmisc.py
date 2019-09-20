@@ -388,6 +388,7 @@ def check_fill_value_encoding(ds):
     :return: xarray Dataset with corrected encoding, dict with encoding that can be used with xarray.to_netcdf
     """
     encoding_dict = {}
+    # print(ds.coords)
 
     for var in ds.variables.items():
         encoding_dict[var[0]] = ds[var[0]].encoding
@@ -397,21 +398,38 @@ def check_fill_value_encoding(ds):
             # coordinates do not have a _FillValue
             if '_FillValue' in var[1].encoding:
                 encoding_dict[var[0]]['_FillValue'] = False
+                print(f'encoding {var[0]} fill value to False')
         else:
-            # _FillValue cannot be NaN and must match the data type so just make sure it matches the data type.
+            # _FillValue cannot be NaN and must match the data type
+            # so just make sure it matches the data type.
             # xarray changes ints to floats, not sure why yet
             if '_FillValue' in var[1].encoding:
+                print('{} fill value is {}'.format(var[0], var[1].encoding['_FillValue']))
                 if np.isnan(var[1].encoding['_FillValue']):
-                    print('NaN found in _FillValue, correcting')
+                    print(f'NaN found in _FillValue of {var[0]}, correcting')
 
-                if var[1].encoding['dtype'] in {'float32', 'float64'}:
-                    var[1].encoding['_FillValue'] = 1E35
-                    encoding_dict[var[0]]['_FillValue'] = 1E35
-                elif var[1].encoding['dtype'] in {'int32', 'int64'}:
-                    var[1].encoding['_FillValue'] = 32768
-                    encoding_dict[var[0]]['_FillValue'] = 32768
+                    if var[1].encoding['dtype'] in {'float32', 'float64'}:
+                        var[1].encoding['_FillValue'] = 1E35
+                        encoding_dict[var[0]]['_FillValue'] = 1E35
+                    elif var[1].encoding['dtype'] in {'int32', 'int64', 'unit16', 'uint32'}:
+                        var[1].encoding['_FillValue'] = 32768
+                        encoding_dict[var[0]]['_FillValue'] = 32768
+                # else:
+                #    var[1].encoding['_FillValue'] = False
+                #    encoding_dict[var[0]]['_FillValue'] = False
+                #    print('Unrecognized data type {} in _FillValue of {}, settings to False'.format(
+                #        var[1].encoding['dtype'], var[0]))
 
     return ds, encoding_dict
+
+
+def display_encoding(dataset, item):
+    print(dataset.variables.items())
+    for var_obj in dataset.variables.items():
+        if item in dataset[var_obj[0]].encoding:
+            print('encoding for {} {} is {}'.format(var_obj[0], item, dataset[var_obj[0]].encoding[item]))
+        else:
+            print('encoding for {} does not have {}'.format(var_obj[0], item))
 
 
 def fix_missing_time(ds, deltat):
